@@ -67,6 +67,7 @@ import ProfilePage from './pages/ProfilePage'
 import TwoFactorPage from './pages/TwoFactorPage'
 import CheckInSuccess from './pages/CheckInSuccess'
 import VerificationSubmissionPage from './pages/VerificationSubmissionPage'
+import LegalKnowledgePage from './pages/LegalKnowledgePage'
 
 // 🛡️ ADMIN PAGES
 import AdminLayout from './components/AdminLayout'
@@ -147,6 +148,9 @@ function AppRoutes() {
                     element={<Protected><ProfilePage /></Protected>} />
 
                 <Route path="/check-in-success" element={<CheckInSuccess />} />
+
+                <Route path="/legal-knowledge"
+                    element={<Protected><LegalKnowledgePage /></Protected>} />
 
                 <Route path="/request-verification"
                     element={<Protected><VerificationSubmissionPage /></Protected>} />

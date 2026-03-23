@@ -94,7 +94,7 @@ export default function DashboardPage() {
                 <div>
                     {/* Curly braces {} inside JSX are used to inject JavaScript expressions.
                         {firstName} injects the value of the firstName variable here. */}
-                    <div className="page-title">Welcome back, {firstName} 👋</div>
+                    <div className="page-title">Welcome, {firstName} 👋</div>
                     <div className="page-subtitle">Your legacy vault is active and secure</div>
                 </div>
                 <span className="badge badge-green">● Active</span>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-4">
                         <div style={{ fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>Quick Actions</div>
                     </div>
-                    <div className="quick-action" onClick={() => navigate('/upload')}>
+                    <div className={`quick-action ${docs.length === 0 ? 'highlight-pulse' : ''}`} onClick={() => navigate('/upload')}>
                         <div className="qa-icon">📤</div>
                         <div>
                             <div className="qa-title">Upload Document</div>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="qa-arrow">→</div>
                     </div>
-                    <div className="quick-action" onClick={() => navigate('/beneficiaries/add')}>
+                    <div className={`quick-action ${bens.length === 0 ? 'highlight-pulse' : ''}`} onClick={() => navigate('/beneficiaries/add')}>
                         <div className="qa-icon">➕</div>
                         <div>
                             <div className="qa-title">Add Beneficiary</div>

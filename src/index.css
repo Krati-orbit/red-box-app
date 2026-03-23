@@ -9,7 +9,7 @@
   --red-dark: #991b1b;
   --red-dim: rgba(220, 38, 38, 0.12);
   --red-glow: rgba(220, 38, 38, 0.35);
-  
+
   --bg: #0a0a0a;
   --bg2: #111111;
   --bg3: #1a1a1a;
@@ -20,7 +20,7 @@
   --text: #f5f5f5;
   --text2: #a3a3a3;
   --text3: #666666;
-  
+
   --green: #22c55e;
   --blue: #3b82f6;
 
@@ -43,13 +43,15 @@
   --text3: #94a3b8;
 
   /* Adjust reds to be slightly softer in light mode for better contrast */
-  --red: #ef4444; 
+  --red: #ef4444;
   --red-dim: rgba(239, 68, 68, 0.1);
   --red-glow: rgba(239, 68, 68, 0.25);
 
   /* CUBES COMPONENT VARS (Light Mode) */
-  --cube-border: 1px dashed rgba(148, 163, 184, 0.3); /* Slate gray dashed border */
-  --cube-ripple: rgba(239, 68, 68, 0.15); /* Red ripple on click */
+  --cube-border: 1px dashed rgba(148, 163, 184, 0.3);
+  /* Slate gray dashed border */
+  --cube-ripple: rgba(239, 68, 68, 0.15);
+  /* Red ripple on click */
 }
 
 * {
@@ -907,6 +909,35 @@ textarea.input {
 
 .font-mono {
   font-family: 'Space Mono', monospace;
+}
+
+/* Quick Action pulse animation for empty states */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 53, 53, 0.4);
+    border-color: rgba(230, 53, 53, 0.5);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(230, 53, 53, 0);
+    border-color: rgba(230, 53, 53, 1);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 53, 53, 0);
+    border-color: rgba(230, 53, 53, 0.2);
+  }
+}
+
+.highlight-pulse {
+  animation: pulse-glow 2s infinite;
+  border: 1px solid var(--red);
+}
+
+.highlight-pulse:hover {
+  animation: none;
+  background: var(--bg3);
+  border-color: var(--red);
 }
 
 /* ═══════════════════════════════════

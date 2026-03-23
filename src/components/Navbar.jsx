@@ -81,6 +81,8 @@ export default function Navbar() {
                         onClick={() => navigate('/documents')}>Documents</button>
                     <button className={`nav-link${isActive('/beneficiaries') ? ' active' : ''}`}
                         onClick={() => navigate('/beneficiaries')}>Beneficiaries</button>
+                    <button className={`nav-link${isActive('/legal-knowledge') ? ' active' : ''}`}
+                        onClick={() => navigate('/legal-knowledge')}>Legal Hub</button>
 
                     <div className="nav-divider" />
 
