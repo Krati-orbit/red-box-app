@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 /functions/node_modules/
+dist/
 
 # Firebase cache and logs
 .firebase/
