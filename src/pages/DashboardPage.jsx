@@ -53,17 +53,37 @@ export default function DashboardPage() {
     React.useEffect(() => {
         if (!user) return
         const fetchCheckInStatus = async () => {
-            const { getDoc, doc } = await import('firebase/firestore')
-            const { db } = await import('../services/firebase')
-            const userDoc = await getDoc(doc(db, 'users', user.uid))
-            if (userDoc.exists()) {
-                const data = userDoc.data()
-                const last = data.lastCheckIn ? data.lastCheckIn.toDate() : data.createdAt.toDate()
-                const diff = Math.floor((new Date() - last) / (1000 * 60 * 60 * 24))
-                const frequency = data.checkInFrequency || 90
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user')
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr)
+                    const last = data.lastCheckIn ? new Date(data.lastCheckIn) : new Date(data.createdAt || Date.now())
+                    const diff = Math.floor((new Date() - last) / (1000 * 60 * 60 * 24))
+                    const frequency = data.checkInFrequency || 90
 
-                setLastCheckIn(diff === 0 ? 'Today' : `${diff} days ago`)
-                setDaysLeft(frequency - diff)
+                    setLastCheckIn(diff === 0 ? 'Today' : `${diff} days ago`)
+                    setDaysLeft(frequency - diff)
+                } else {
+                    setLastCheckIn('Today')
+                    setDaysLeft(90)
+                }
+                return
+            }
+            try {
+                const { getDoc, doc } = await import('firebase/firestore')
+                const { db } = await import('../services/firebase')
+                const userDoc = await getDoc(doc(db, 'users', user.uid))
+                if (userDoc.exists()) {
+                    const data = userDoc.data()
+                    const last = data.lastCheckIn ? data.lastCheckIn.toDate() : data.createdAt.toDate()
+                    const diff = Math.floor((new Date() - last) / (1000 * 60 * 60 * 24))
+                    const frequency = data.checkInFrequency || 90
+
+                    setLastCheckIn(diff === 0 ? 'Today' : `${diff} days ago`)
+                    setDaysLeft(frequency - diff)
+                }
+            } catch (err) {
+                console.error("fetchCheckInStatus error:", err)
             }
         }
         fetchCheckInStatus()
@@ -71,6 +91,20 @@ export default function DashboardPage() {
 
     const handleManualCheckIn = async () => {
         try {
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user')
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr)
+                    data.lastCheckIn = new Date().toISOString()
+                    data.isActive = true
+                    localStorage.setItem('red_box_mock_user', JSON.stringify(data))
+                }
+                setLastCheckIn('Today')
+                setDaysLeft(90)
+                showToast('✅ Check-in successful! Account is active.')
+                return
+            }
+
             const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore')
             const { db } = await import('../services/firebase')
             await updateDoc(doc(db, 'users', user.uid), {

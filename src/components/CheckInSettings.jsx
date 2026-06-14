@@ -22,6 +22,20 @@ export default function CheckInSettings() {
     useEffect(() => {
         const fetchSettings = async () => {
             if (!user) return;
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user');
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr);
+                    setSettings({
+                        checkInFrequency: data.checkInFrequency || 90,
+                        vacationMode: !!data.vacationModeUntil && new Date(data.vacationModeUntil) > new Date(),
+                        vacationUntil: data.vacationModeUntil ? new Date(data.vacationModeUntil).toISOString().split('T')[0] : '',
+                        backupEmails: data.backupEmails || []
+                    });
+                }
+                setLoading(false);
+                return;
+            }
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
@@ -51,12 +65,37 @@ export default function CheckInSettings() {
             };
 
             if (settings.vacationMode && settings.vacationUntil) {
-                updateData.vacationModeUntil = Timestamp.fromDate(new Date(settings.vacationUntil));
+                updateData.vacationModeUntil = settings.vacationUntil;
             } else {
                 updateData.vacationModeUntil = null;
             }
 
-            await updateDoc(doc(db, 'users', user.uid), updateData);
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user');
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr);
+                    const updated = {
+                        ...data,
+                        ...updateData
+                    };
+                    localStorage.setItem('red_box_mock_user', JSON.stringify(updated));
+                }
+                showToast('✅ Settings updated successfully!');
+                setSaving(false);
+                return;
+            }
+
+            const firestoreUpdateData = {
+                checkInFrequency: settings.checkInFrequency,
+                backupEmails: settings.backupEmails
+            };
+            if (settings.vacationMode && settings.vacationUntil) {
+                firestoreUpdateData.vacationModeUntil = Timestamp.fromDate(new Date(settings.vacationUntil));
+            } else {
+                firestoreUpdateData.vacationModeUntil = null;
+            }
+
+            await updateDoc(doc(db, 'users', user.uid), firestoreUpdateData);
             showToast('✅ Settings updated successfully!');
         } catch (error) {
             console.error("Error saving settings:", error);

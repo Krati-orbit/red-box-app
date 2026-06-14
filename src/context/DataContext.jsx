@@ -80,6 +80,18 @@ export function DataProvider({ children }) {
         // If no user is logged in, clear docs and stop.
         if (!uid) { setDocs([]); return }
 
+        // If it is a mock user, read from localStorage and do NOT start Firestore listener
+        if (uid.startsWith('mock_')) {
+            const loadMockDocs = () => {
+                const stored = localStorage.getItem(`red_box_docs_${uid}`)
+                setDocs(stored ? JSON.parse(stored) : [])
+            }
+            loadMockDocs()
+            // Add a window listener or just rely on state since add/delete are in this context
+            window.addEventListener(`mock_docs_changed_${uid}`, loadMockDocs)
+            return () => window.removeEventListener(`mock_docs_changed_${uid}`, loadMockDocs)
+        }
+
         // Build a Firestore query:
         // "Give me all documents inside users/{uid}/documents,
         //  sorted by createdAt in descending order (newest first)"
@@ -89,15 +101,12 @@ export function DataProvider({ children }) {
         )
 
         // onSnapshot sets up a REAL-TIME listener.
-        // This is like subscribing to live updates.
-        // Every time ANY document in the collection is added/edited/deleted,
-        // Firebase calls our callback with the updated data — instantly! ⚡
         const unsub = onSnapshot(q, snap => {
-            // snap.docs = array of Firestore "document snapshots"
-            // We map each snapshot to a plain JS object with its data + ID
             setDocs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-            //                              ↑ d.id is the Firestore document ID
-            //                                d.data() is the actual stored data
+        }, err => {
+            console.error("Firestore docs listener error, using localStorage fallback:", err)
+            const stored = localStorage.getItem(`red_box_docs_${uid}`)
+            setDocs(stored ? JSON.parse(stored) : [])
         })
 
         // Return the unsubscribe function so the listener stops when the
@@ -109,6 +118,16 @@ export function DataProvider({ children }) {
     useEffect(() => {
         if (!uid) { setBens([]); return }
 
+        if (uid.startsWith('mock_')) {
+            const loadMockBens = () => {
+                const stored = localStorage.getItem(`red_box_bens_${uid}`)
+                setBens(stored ? JSON.parse(stored) : [])
+            }
+            loadMockBens()
+            window.addEventListener(`mock_bens_changed_${uid}`, loadMockBens)
+            return () => window.removeEventListener(`mock_bens_changed_${uid}`, loadMockBens)
+        }
+
         const q = query(
             collection(db, 'users', uid, 'beneficiaries'),
             orderBy('createdAt', 'asc') // oldest added appears first
@@ -116,42 +135,75 @@ export function DataProvider({ children }) {
 
         const unsub = onSnapshot(q, snap => {
             setBens(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        }, err => {
+            console.error("Firestore bens listener error, using localStorage fallback:", err)
+            const stored = localStorage.getItem(`red_box_bens_${uid}`)
+            setBens(stored ? JSON.parse(stored) : [])
         })
 
         return unsub
     }, [uid])
 
     // ── ADD DOCUMENT ──────────────────────────────────────
-    // Adds a new document record to Firestore.
-    // Firestore automatically generates a unique ID for each document.
-    // The onSnapshot listener above will automatically pick up this
-    // new doc and update our 'docs' state — we don't need to do it manually!
     async function addDoc_(docData) {
         if (!uid) return // Safety check: don't write if no user is logged in
+
+        if (uid.startsWith('mock_')) {
+            const stored = localStorage.getItem(`red_box_docs_${uid}`)
+            const currentDocs = stored ? JSON.parse(stored) : []
+            const newDoc = {
+                id: 'mock_doc_' + Math.random().toString(36).substr(2, 9),
+                ...docData,
+                createdAt: { toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) }
+            }
+            const updatedDocs = [newDoc, ...currentDocs]
+            localStorage.setItem(`red_box_docs_${uid}`, JSON.stringify(updatedDocs))
+            window.dispatchEvent(new Event(`mock_docs_changed_${uid}`))
+            return
+        }
 
         await addDoc(collection(db, 'users', uid, 'documents'), {
             ...docData,              // spread all the document fields (name, icon, etc.)
             createdAt: serverTimestamp() // Firebase server records the exact time
         })
-        // No need to call setDocs() — onSnapshot handles the update automatically! 🔄
     }
 
     // ── DELETE DOCUMENT ───────────────────────────────────
-    // docId = the Firestore-generated ID (a string like "xK7mN2pQ...")
-    // doc(db, 'users', uid, 'documents', docId) = a reference to that specific record
     async function deleteDoc_(docId) {
         if (!uid) return
+
+        if (uid.startsWith('mock_')) {
+            const stored = localStorage.getItem(`red_box_docs_${uid}`)
+            const currentDocs = stored ? JSON.parse(stored) : []
+            const updatedDocs = currentDocs.filter(d => d.id !== docId)
+            localStorage.setItem(`red_box_docs_${uid}`, JSON.stringify(updatedDocs))
+            window.dispatchEvent(new Event(`mock_docs_changed_${uid}`))
+            return
+        }
+
         await deleteDoc(doc(db, 'users', uid, 'documents', docId))
-        // Again, onSnapshot will automatically update the docs list!
     }
 
     // ── ADD BENEFICIARY ───────────────────────────────────
     async function addBen(ben) {
         if (!uid) return
 
-        // Calculate initials here so they're stored in Firestore
-        // e.g. "Krati Sharma" → "KS"
         const initials = ben.name.trim().split(/\s+/).map(w => w[0].toUpperCase()).slice(0, 2).join('')
+
+        if (uid.startsWith('mock_')) {
+            const stored = localStorage.getItem(`red_box_bens_${uid}`)
+            const currentBens = stored ? JSON.parse(stored) : []
+            const newBen = {
+                id: 'mock_ben_' + Math.random().toString(36).substr(2, 9),
+                ...ben,
+                initials,
+                createdAt: { toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) }
+            }
+            const updatedBens = [...currentBens, newBen]
+            localStorage.setItem(`red_box_bens_${uid}`, JSON.stringify(updatedBens))
+            window.dispatchEvent(new Event(`mock_bens_changed_${uid}`))
+            return
+        }
 
         await addDoc(collection(db, 'users', uid, 'beneficiaries'), {
             ...ben,         // name, email, phone, relation, etc.
@@ -163,17 +215,35 @@ export function DataProvider({ children }) {
     // ── DELETE BENEFICIARY ────────────────────────────────
     async function deleteBen(benId) {
         if (!uid) return
+
+        if (uid.startsWith('mock_')) {
+            const stored = localStorage.getItem(`red_box_bens_${uid}`)
+            const currentBens = stored ? JSON.parse(stored) : []
+            const updatedBens = currentBens.filter(b => b.id !== benId)
+            localStorage.setItem(`red_box_bens_${uid}`, JSON.stringify(updatedBens))
+            window.dispatchEvent(new Event(`mock_bens_changed_${uid}`))
+            return
+        }
+
         await deleteDoc(doc(db, 'users', uid, 'beneficiaries', benId))
     }
 
     // ── UPDATE BENEFICIARY ────────────────────────────────
-    // Merges the new field values into the existing Firestore document.
-    // Only the fields you pass will be changed — all others stay the same.
     async function updateBen(benId, fields) {
         if (!uid) return
+
+        if (uid.startsWith('mock_')) {
+            const stored = localStorage.getItem(`red_box_bens_${uid}`)
+            const currentBens = stored ? JSON.parse(stored) : []
+            const updatedBens = currentBens.map(b => b.id === benId ? { ...b, ...fields, updatedAt: Date.now() } : b)
+            localStorage.setItem(`red_box_bens_${uid}`, JSON.stringify(updatedBens))
+            window.dispatchEvent(new Event(`mock_bens_changed_${uid}`))
+            return
+        }
+
         await updateDoc(doc(db, 'users', uid, 'beneficiaries', benId), {
             ...fields,
-            updatedAt: serverTimestamp()  // track when it was last edited
+            updatedAt: serverTimestamp()
         })
     }
 

@@ -39,11 +39,25 @@ export default function ProfilePage() {
     React.useEffect(() => {
         if (!user) return
         async function fetchSettings() {
-            const userDoc = await getDoc(doc(db, 'users', user.uid))
-            if (userDoc.exists()) {
-                setIs2FAEnabled(userDoc.data().twoFactorEnabled || false)
-                setTwoFactorMethod(userDoc.data().twoFactorMethod || '')
-                setIsAdmin(userDoc.data().isAdmin || false)
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user')
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr)
+                    setIs2FAEnabled(data.twoFactorEnabled || false)
+                    setTwoFactorMethod(data.twoFactorMethod || '')
+                    setIsAdmin(data.isAdmin || false)
+                }
+                return
+            }
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid))
+                if (userDoc.exists()) {
+                    setIs2FAEnabled(userDoc.data().twoFactorEnabled || false)
+                    setTwoFactorMethod(userDoc.data().twoFactorMethod || '')
+                    setIsAdmin(userDoc.data().isAdmin || false)
+                }
+            } catch (err) {
+                console.error("fetchSettings error:", err)
             }
         }
         fetchSettings()
@@ -52,6 +66,20 @@ export default function ProfilePage() {
     async function handleDisable2FA() {
         if (!window.confirm('Are you sure you want to disable 2FA? This will make your vault less secure.')) return
         try {
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user')
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr)
+                    data.twoFactorEnabled = false
+                    data.twoFactorMethod = ''
+                    data.twoFactorSecret = null
+                    data.backupCodes = []
+                    localStorage.setItem('red_box_mock_user', JSON.stringify(data))
+                }
+                setIs2FAEnabled(false)
+                showToast('🛡️ 2FA disabled')
+                return
+            }
             await updateDoc(doc(db, 'users', user.uid), {
                 twoFactorEnabled: false,
                 twoFactorMethod: '',
@@ -74,6 +102,18 @@ export default function ProfilePage() {
         }
         setNameLoading(true)
         try {
+            if (user.uid.startsWith('mock_')) {
+                const mockUserStr = localStorage.getItem('red_box_mock_user')
+                if (mockUserStr) {
+                    const data = JSON.parse(mockUserStr)
+                    data.displayName = displayName.trim()
+                    localStorage.setItem('red_box_mock_user', JSON.stringify(data))
+                }
+                user.displayName = displayName.trim()
+                showToast('✅ Display name updated!')
+                setNameLoading(false)
+                return
+            }
             await updateProfile(auth.currentUser, { displayName: displayName.trim() })
             showToast('✅ Display name updated!')
         } catch (err) {
@@ -89,6 +129,12 @@ export default function ProfilePage() {
         if (newPwd !== confirmPwd) { showToast('❌ Passwords do not match'); return }
         setPwdLoading(true)
         try {
+            if (user.uid.startsWith('mock_')) {
+                showToast('✅ Password changed successfully (Mocked)!')
+                setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
+                setPwdLoading(false)
+                return
+            }
             const credential = EmailAuthProvider.credential(user.email, currentPwd)
             await reauthenticateWithCredential(auth.currentUser, credential)
             await updatePassword(auth.currentUser, newPwd)

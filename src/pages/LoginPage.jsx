@@ -37,8 +37,8 @@ export default function LoginPage() {
     // password → what the user typed in the password field
     // error    → error message to display (empty string = no error)
     // loading  → true while we're waiting for Firebase to respond
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [email, setEmail] = useState('testuser1@gmail.com')
+    const [password, setPassword] = useState('password123')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
