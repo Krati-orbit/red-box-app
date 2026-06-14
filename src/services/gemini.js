@@ -30,12 +30,7 @@
 //   and getting one back. It's promise-based, so we use async/await.
 // ============================================================
 
-// ── API KEY ───────────────────────────────────────────────
-// This key authenticates our requests to Google's Gemini API.
-// Think of it like a password that tells Google "this is a valid user."
-// ⚠️  For production, move this to an environment variable (.env file)
-//     so it's not visible in your public source code.
-const GEMINI_API_KEY = "AIzaSyDvaEuejFBFvCVQUZagDjFsuHq4ZJSUV_4"
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""
 
 // ── SYSTEM PROMPT ─────────────────────────────────────────
 // This is a hidden instruction message we always send at the START
